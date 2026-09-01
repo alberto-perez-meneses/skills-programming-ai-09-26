@@ -1,42 +1,15 @@
 const express = require('express')
 const app = express()
 const port = 3000
-const reverseString = require('./lib/string').reverseString;
+const {
+    getHome,
+    getUserById,
+    reverseUserString
+} = require('./controllers/mainController');
 
-const users = [
-    { id: 1, name: 'Alice' },
-    { id: 2, name: 'Bob' },
-    { id: 3, name: 'Charlie' }
-];
-
-app.get('/', (req, res) => {
-    res.send('Hello World!')
-})
-
-
-app.get('/about/:id', (req, res) => {
-    const userId = req.params.id;
-
-    if (!userId) {
-        res.status(400).send({ error: "Missing id" });
-        return;
-    }
-
-    const user = users.find(u => u.id === parseInt(userId));
-
-    if (!user) {
-        res.status(404).send({ error: "User not found" });
-        return;
-    }
-
-    res.send(user);
-})
-
-app.get('/reverse/:str', (req, res) => {
-    const str = req.params.str;
-    const reversed = reverseString(str);
-    res.send({ original: str, reversed: reversed });
-});
+app.get('/', getHome)
+app.get('/about/:id', getUserById)
+app.get('/reverse/:str', reverseUserString)
 
 
 
