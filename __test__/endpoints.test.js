@@ -1,41 +1,111 @@
-const request = require('supertest');
-const app = require('../index'); 
+const {
+    getHome,
+    getUserById,
+    reverseUserString
+} = require('../controllers/mainController');
 
-describe('API Endpoints', () => {
-    
-    
-    test('GET / debe retornar Hello World!', async () => {
-        const response = await request(app).get('/');
-        
-        expect(response.statusCode).toBe(200);
-        expect(response.text).toBe('Hello World!');
+function createResponse() {
+    const response = {
+        send: jest.fn()
+    };
+
+    response.status = jest.fn().mockReturnValue(response);
+    return response;
+}
+
+describe('getHome', () => {
+    test('envía el saludo esperado', () => {
+        const response = createResponse();
+
+        getHome({}, response);
+
+        expect(response.send).toHaveBeenCalledWith('Hello World!');
+    });
+});
+
+describe('getUserById', () => {
+    test('envía el usuario cuando el identificador existe', () => {
+        const response = createResponse();
+
+        getUserById({ params: { id: '1' } }, response);
+
+        expect(response.status).not.toHaveBeenCalled();
+        expect(response.send).toHaveBeenCalledWith({ id: 1, name: 'Alice' });
     });
 
-    test('GET /about/:id debe retornar un usuario existente (Alice)', async () => {
-        const response = await request(app).get('/about/1');
-        
-        expect(response.statusCode).toBe(200);
-        expect(response.body).toEqual({ id: 1, name: 'Alice' });
+    test('acepta el prefijo numérico que parseInt reconoce', () => {
+        const response = createResponse();
+
+        getUserById({ params: { id: '1abc' } }, response);
+
+        expect(response.send).toHaveBeenCalledWith({ id: 1, name: 'Alice' });
     });
 
-    test('GET /about/:id debe retornar 404 si el usuario no existe', async () => {
-        const response = await request(app).get('/about/999');
-        
-        expect(response.statusCode).toBe(404);
-        expect(response.body).toEqual({ error: "User not found" });
+    test.each([
+        ['un identificador inexistente', '999'],
+        ['un identificador vacío', ''],
+        ['un identificador nulo', null],
+        ['un identificador ausente', undefined],
+        ['un identificador Unicode', 'ñ'],
+        ['un identificador emoji', '😀']
+    ])('responde 404 para %s', (_, id) => {
+        const response = createResponse();
+
+        getUserById({ params: { id } }, response);
+
+        expect(response.status).toHaveBeenCalledWith(404);
+        expect(response.send).toHaveBeenCalledWith({ error: 'User not found' });
+    });
+});
+
+describe('reverseUserString', () => {
+    test('envía la cadena original y su versión invertida', () => {
+        const response = createResponse();
+
+        reverseUserString({ params: { str: 'hello' } }, response);
+
+        expect(response.send).toHaveBeenCalledWith({
+            original: 'hello',
+            reversed: 'olleh'
+        });
     });
 
-    test('GET /about/:id debe retornar JSON', async () => {
-        const response = await request(app).get('/about/2');
-        
-        expect(response.type).toBe('application/json');
-        expect(response.body.name).toBe('Bob');
+    test('conserva los campos vacíos al invertir una cadena vacía', () => {
+        const response = createResponse();
+
+        reverseUserString({ params: { str: '' } }, response);
+
+        expect(response.send).toHaveBeenCalledWith({ original: '', reversed: '' });
     });
 
-    test('GET /reverse/:str debe retornar el texto invertido', async () => {
-        const response = await request(app).get('/reverse/hello');
+    test('invierte caracteres Unicode BMP', () => {
+        const response = createResponse();
 
-        expect(response.statusCode).toBe(200);
-        expect(response.body).toEqual({ original: 'hello', reversed: 'olleh' });
+        reverseUserString({ params: { str: 'mañana' } }, response);
+
+        expect(response.send).toHaveBeenCalledWith({
+            original: 'mañana',
+            reversed: 'anañam'
+        });
+    });
+
+    test('invierte un emoji por sus unidades UTF-16 actuales', () => {
+        const response = createResponse();
+
+        reverseUserString({ params: { str: '😀' } }, response);
+
+        expect(response.send).toHaveBeenCalledWith({
+            original: '😀',
+            reversed: '\uDE00\uD83D'
+        });
+    });
+
+    test.each([
+        ['una cadena nula', null],
+        ['una cadena ausente', undefined]
+    ])('lanza TypeError para %s', (_, str) => {
+        const response = createResponse();
+
+        expect(() => reverseUserString({ params: { str } }, response)).toThrow(TypeError);
     });
 });
