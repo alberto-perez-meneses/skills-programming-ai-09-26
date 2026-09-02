@@ -1,4 +1,8 @@
-/api/*
+/api/node_modules/*
+/api/package-lock.json
+/api/dist/*
+/api/logs/*
+/api/coverage/*
 /node_modules/*
 /coverage/*
 .DS_Store   
