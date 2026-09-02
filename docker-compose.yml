@@ -1,0 +1,49 @@
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: nodejs-api
+    ports:
+      - "${API_PORT}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+    restart: on-failure
+    networks:
+      - app-network
+    volumes:
+      - ./api:/app
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:${MYSQL_VERSION}
+    container_name: nodejs-mysql
+    ports:
+      - "${MYSQL_PORT}:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    restart: on-failure
+    networks:
+      - app-network
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mydb:/docker-entrypoint-initdb.d
+      - ./mydb/my.cnf:/etc/mysql/conf.d/custom.cnf
+
+
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
