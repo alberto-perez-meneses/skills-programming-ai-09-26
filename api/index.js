@@ -4,12 +4,16 @@ const port = 3000
 const {
     getHome,
     getUserById,
-    reverseUserString
+    reverseUserString,
+    reverseUserStringHttp,
+    getUserAsync,
+    getUserWithRetry
 } = require('./controllers/mainController');
 
 app.get('/', getHome)
 app.get('/about/:id', getUserById)
 app.get('/reverse/:str', reverseUserString)
+app.get('/reverse-http/:str', reverseUserStringHttp)
 app.get('/async/:id', getUserAsync)
 app.get('/retry/:id', getUserWithRetry)
 

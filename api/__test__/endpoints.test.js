@@ -1,7 +1,8 @@
 const {
     getHome,
     getUserById,
-    reverseUserString
+    reverseUserString,
+    reverseUserStringHttp
 } = require('../controllers/mainController');
 
 function createResponse() {
@@ -107,5 +108,45 @@ describe('reverseUserString', () => {
         const response = createResponse();
 
         expect(() => reverseUserString({ params: { str } }, response)).toThrow(TypeError);
+    });
+});
+
+describe('reverseUserStringHttp', () => {
+    const originalFetch = global.fetch;
+
+    afterEach(() => {
+        global.fetch = originalFetch;
+        delete process.env.REVERSE_UPSTREAM_BASE_URL;
+    });
+
+    test('llama al endpoint reverse y propaga su payload', async () => {
+        const response = createResponse();
+        const payload = { original: 'hello world', reversed: 'dlrow olleh' };
+        global.fetch = jest.fn().mockResolvedValue({
+            ok: true,
+            json: async () => payload
+        });
+
+        process.env.REVERSE_UPSTREAM_BASE_URL = 'http://127.0.0.1:3000';
+
+        await reverseUserStringHttp({ params: { str: 'hello world' } }, response);
+
+        expect(global.fetch).toHaveBeenCalledWith('http://127.0.0.1:3000/reverse/hello%20world');
+        expect(response.status).not.toHaveBeenCalled();
+        expect(response.send).toHaveBeenCalledWith(payload);
+    });
+
+    test('responde 502 cuando falla la llamada al upstream', async () => {
+        const response = createResponse();
+        global.fetch = jest.fn().mockRejectedValue(new Error('network failure'));
+
+        process.env.REVERSE_UPSTREAM_BASE_URL = 'http://127.0.0.1:3000';
+
+        await reverseUserStringHttp({ params: { str: 'hello' } }, response);
+
+        expect(response.status).toHaveBeenCalledWith(502);
+        expect(response.send).toHaveBeenCalledWith({
+            error: 'Reverse upstream is unavailable'
+        });
     });
 });
