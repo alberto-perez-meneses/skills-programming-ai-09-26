@@ -204,3 +204,71 @@ describe('getUserAsync', () => {
         expect(response.send).toHaveBeenCalledWith({ error: 'User not found' });
     }, 2000);
 });
+
+describe('getUserWithRetry', () => {
+    let getUserWithRetry;
+
+    beforeEach(() => {
+        jest.resetModules();
+        ({ getUserWithRetry } = require('../controllers/mainController'));
+    });
+
+    function getStatus(response) {
+        if (response.status.mock.calls.length > 0) {
+            return response.status.mock.calls[0][0];
+        }
+
+        return 200;
+    }
+
+    function requestUntilSuccess(handler, req, maxAttempts) {
+        const request = jest.fn((requestPayload, response) => {
+            handler(requestPayload, response);
+        });
+
+        const responses = [];
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+            const response = createResponse();
+            request(req, response);
+            responses.push(response);
+
+            if (getStatus(response) === 200) {
+                break;
+            }
+        }
+
+        return { request, responses };
+    }
+
+    test('falla dos veces con 503 y tiene éxito en el tercer intento', () => {
+        const req = { params: { id: '1' }, query: { failures: '2' } };
+        const { request, responses } = requestUntilSuccess(getUserWithRetry, req, 5);
+        const [res1, res2, res3] = responses;
+
+        expect(request).toHaveBeenCalledTimes(3);
+        expect(responses).toHaveLength(3);
+
+        expect(res1.status).toHaveBeenCalledWith(503);
+        expect(res1.send).toHaveBeenCalledTimes(1);
+        expect(res1.send).toHaveBeenCalledWith({
+            error: 'Service temporarily unavailable',
+            attempt: 1
+        });
+
+        expect(res2.status).toHaveBeenCalledWith(503);
+        expect(res2.send).toHaveBeenCalledTimes(1);
+        expect(res2.send).toHaveBeenCalledWith({
+            error: 'Service temporarily unavailable',
+            attempt: 2
+        });
+
+        expect(res3.status).not.toHaveBeenCalled();
+        expect(res3.send).toHaveBeenCalledTimes(1);
+        expect(res3.send).toHaveBeenCalledWith({
+            id: 1,
+            name: 'Alice',
+            attempt: 3
+        });
+    });
+});
