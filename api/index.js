@@ -4,7 +4,9 @@ const port = 3000
 const {
     getHome,
     getUserById,
-    reverseUserString
+    reverseUserString,
+    getUserAsync,
+    getUserWithRetry
 } = require('./controllers/mainController');
 
 app.get('/', getHome)
