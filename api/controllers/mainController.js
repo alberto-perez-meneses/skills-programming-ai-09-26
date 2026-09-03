@@ -115,6 +115,148 @@ function getUserById(req, res) {
  * @example
  * // GET /reverse/hello → { original: "hello", reversed: "olleh" }
  */
+
+
+/**
+ * Handler de `GET /async/:id`.
+ *
+ * Simula una operación asíncrona que tarda 1 segundo
+ * antes de devolver la información del usuario.
+ *
+ * @param {Request} req Petición Express; usa `req.params.id`.
+ * @param {Response} res Respuesta Express.
+ * @returns {void}
+ *
+ * @example
+ * // GET /async/1
+ * // → después de 1 segundo:
+ * // { id: 1, name: "Alice" }
+ */
+function getUserAsync(req, res) {
+    const userId = req.params.id;
+
+    setTimeout(() => {
+        const user = users.find(
+            user => user.id === parseInt(userId, 10)
+        );
+
+        if (!user) {
+            res.status(404).send({
+                error: "User not found"
+            });
+            return;
+        }
+
+        res.send(user);
+    }, 1000);
+}
+
+/**
+ * Contador de intentos para cada usuario.
+ * Solo utilizado para fines demostrativos de testing.
+ *
+ * @type {Object.<string, number>}
+ */
+const retryAttempts = {};
+
+/**
+ * Handler de `GET /retry/:id`.
+ *
+ * Simula un servicio inestable que falla las primeras N peticiones
+ * y posteriormente devuelve correctamente el usuario.
+ *
+ * @param {Request} req Petición Express.
+ * @param {Response} res Respuesta Express.
+ * @returns {void}
+ *
+ * @example
+ * // GET /retry/1?failures=2
+ *
+ * // Intento 1 → 503
+ * // Intento 2 → 503
+ * // Intento 3 → 200 { id: 1, name: "Alice" }
+ */
+function getUserWithRetry(req, res) {
+    const userId = req.params.id;
+    const failures = parseInt(req.query.failures, 10) || 0;
+
+    retryAttempts[userId] = (retryAttempts[userId] || 0) + 1;
+
+    const currentAttempt = retryAttempts[userId];
+
+    if (currentAttempt <= failures) {
+        res.status(503).send({
+            error: 'Service temporarily unavailable',
+            attempt: currentAttempt
+        });
+        return;
+    }
+
+    const user = users.find(
+        user => user.id === parseInt(userId, 10)
+    );
+
+    if (!user) {
+        res.status(404).send({
+            error: 'User not found'
+        });
+        return;
+    }
+
+    res.send({
+        ...user,
+        attempt: currentAttempt
+    });
+}
+
+/**
+ * Handler de `GET /products/sort`.
+ *
+ * Recibe una lista de precios y devuelve los precios ordenados
+ * de menor a mayor.
+ *
+ * @param {Request} req Petición Express.
+ * @param {Response} res Respuesta Express.
+ * @returns {void}
+ *
+ * @example
+ * // GET /products/sort?prices=30,10,50,20
+ * //
+ * // {
+ * //   original: [30, 10, 50, 20],
+ * //   sorted: [10, 20, 30, 50]
+ * // }
+ */
+function sortProductPrices(req, res) {
+    const prices = req.query.prices;
+
+    if (!prices) {
+        res.status(400).send({
+            error: 'prices parameter is required'
+        });
+        return;
+    }
+
+    const numbers = prices
+        .split(',')
+        .map(Number);
+
+    if (numbers.some(Number.isNaN)) {
+        res.status(400).send({
+            error: 'All prices must be numbers'
+        });
+        return;
+    }
+
+    const sorted = [...numbers].sort((a, b) => a - b);
+
+    res.send({
+        original: numbers,
+        sorted
+    });
+}
+
+
 function reverseUserString(req, res) {
     const str = req.params.str;
     const reversed = reverseString(str);
@@ -125,5 +267,7 @@ function reverseUserString(req, res) {
 module.exports = {
     getHome,
     getUserById,
-    reverseUserString
+    reverseUserString,
+    getUserAsync,
+    getUserWithRetry
 };

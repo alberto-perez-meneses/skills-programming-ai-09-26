@@ -10,6 +10,8 @@ const {
 app.get('/', getHome)
 app.get('/about/:id', getUserById)
 app.get('/reverse/:str', reverseUserString)
+app.get('/async/:id', getUserAsync)
+app.get('/retry/:id', getUserWithRetry)
 
 
 
