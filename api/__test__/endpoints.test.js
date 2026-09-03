@@ -2,7 +2,8 @@ const {
     getHome,
     getUserById,
     reverseUserString,
-    reverseUserStringHttp
+    reverseUserStringHttp,
+    getUserAsync
 } = require('../controllers/mainController');
 
 function createResponse() {
@@ -149,4 +150,57 @@ describe('reverseUserStringHttp', () => {
             error: 'Reverse upstream is unavailable'
         });
     });
+});
+
+describe('getUserAsync', () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    test('envía el usuario después de 1 segundo', async () => {
+        const response = createResponse();
+
+        getUserAsync({ params: { id: '1' } }, response);
+
+        expect(response.send).not.toHaveBeenCalled();
+        expect(response.status).not.toHaveBeenCalled();
+
+        await jest.advanceTimersByTimeAsync(999);
+        expect(response.send).not.toHaveBeenCalled();
+
+        await jest.advanceTimersByTimeAsync(1);
+        expect(response.status).not.toHaveBeenCalled();
+        expect(response.send).toHaveBeenCalledWith({ id: 1, name: 'Alice' });
+    }, 2000);
+
+    test('responde 404 después de 1 segundo cuando el identificador no existe', async () => {
+        const response = createResponse();
+
+        getUserAsync({ params: { id: '999' } }, response);
+
+        expect(response.send).not.toHaveBeenCalled();
+
+        await jest.advanceTimersByTimeAsync(1000);
+
+        expect(response.status).toHaveBeenCalledWith(404);
+        expect(response.send).toHaveBeenCalledWith({ error: 'User not found' });
+    }, 2000);
+
+    test.each([
+        ['un identificador vacío', ''],
+        ['un identificador nulo', null]
+    ])('responde 404 después de 1 segundo para %s', async (_, id) => {
+        const response = createResponse();
+
+        getUserAsync({ params: { id } }, response);
+
+        await jest.advanceTimersByTimeAsync(1000);
+
+        expect(response.status).toHaveBeenCalledWith(404);
+        expect(response.send).toHaveBeenCalledWith({ error: 'User not found' });
+    }, 2000);
 });
