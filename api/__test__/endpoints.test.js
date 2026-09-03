@@ -1,7 +1,9 @@
 const {
     getHome,
     getUserById,
-    reverseUserString
+    reverseUserString,
+    reverseUserStringHttp,
+    getUserAsync
 } = require('../controllers/mainController');
 
 function createResponse() {
@@ -146,4 +148,97 @@ describe('reverseUserString', () => {
         // Assert
         expect(action).toThrow(TypeError);
     });
+});
+
+describe('reverseUserStringHttp', () => {
+    const originalFetch = global.fetch;
+
+    afterEach(() => {
+        global.fetch = originalFetch;
+        delete process.env.REVERSE_UPSTREAM_BASE_URL;
+    });
+
+    test('llama al endpoint reverse y propaga su payload', async () => {
+        const response = createResponse();
+        const payload = { original: 'hello world', reversed: 'dlrow olleh' };
+        global.fetch = jest.fn().mockResolvedValue({
+            ok: true,
+            json: async () => payload
+        });
+
+        process.env.REVERSE_UPSTREAM_BASE_URL = 'http://127.0.0.1:3000';
+
+        await reverseUserStringHttp({ params: { str: 'hello world' } }, response);
+
+        expect(global.fetch).toHaveBeenCalledWith('http://127.0.0.1:3000/reverse/hello%20world');
+        expect(response.status).not.toHaveBeenCalled();
+        expect(response.send).toHaveBeenCalledWith(payload);
+    });
+
+    test('responde 502 cuando falla la llamada al upstream', async () => {
+        const response = createResponse();
+        global.fetch = jest.fn().mockRejectedValue(new Error('network failure'));
+
+        process.env.REVERSE_UPSTREAM_BASE_URL = 'http://127.0.0.1:3000';
+
+        await reverseUserStringHttp({ params: { str: 'hello' } }, response);
+
+        expect(response.status).toHaveBeenCalledWith(502);
+        expect(response.send).toHaveBeenCalledWith({
+            error: 'Reverse upstream is unavailable'
+        });
+    });
+});
+
+describe('getUserAsync', () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    test('envía el usuario después de 1 segundo', async () => {
+        const response = createResponse();
+
+        getUserAsync({ params: { id: '1' } }, response);
+
+        expect(response.send).not.toHaveBeenCalled();
+        expect(response.status).not.toHaveBeenCalled();
+
+        await jest.advanceTimersByTimeAsync(999);
+        expect(response.send).not.toHaveBeenCalled();
+
+        await jest.advanceTimersByTimeAsync(1);
+        expect(response.status).not.toHaveBeenCalled();
+        expect(response.send).toHaveBeenCalledWith({ id: 1, name: 'Alice' });
+    }, 2000);
+
+    test('responde 404 después de 1 segundo cuando el identificador no existe', async () => {
+        const response = createResponse();
+
+        getUserAsync({ params: { id: '999' } }, response);
+
+        expect(response.send).not.toHaveBeenCalled();
+
+        await jest.advanceTimersByTimeAsync(1000);
+
+        expect(response.status).toHaveBeenCalledWith(404);
+        expect(response.send).toHaveBeenCalledWith({ error: 'User not found' });
+    }, 2000);
+
+    test.each([
+        ['un identificador vacío', ''],
+        ['un identificador nulo', null]
+    ])('responde 404 después de 1 segundo para %s', async (_, id) => {
+        const response = createResponse();
+
+        getUserAsync({ params: { id } }, response);
+
+        await jest.advanceTimersByTimeAsync(1000);
+
+        expect(response.status).toHaveBeenCalledWith(404);
+        expect(response.send).toHaveBeenCalledWith({ error: 'User not found' });
+    }, 2000);
 });

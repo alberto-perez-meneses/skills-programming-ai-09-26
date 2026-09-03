@@ -264,10 +264,37 @@ function reverseUserString(req, res) {
     res.send({ original: str, reversed: reversed });
 }
 
+async function reverseUserStringHttp(req, res) {
+    const str = req.params.str;
+    const port = process.env.PORT || 3000;
+    const baseUrl = process.env.REVERSE_UPSTREAM_BASE_URL || `http://127.0.0.1:${port}`;
+    const url = `${baseUrl}/reverse/${encodeURIComponent(str)}`;
+
+    try {
+        const upstreamResponse = await fetch(url);
+        const payload = await upstreamResponse.json();
+
+        if (!upstreamResponse.ok) {
+            res.status(502).send({
+                error: 'Reverse upstream returned an error',
+                status: upstreamResponse.status
+            });
+            return;
+        }
+
+        res.send(payload);
+    } catch (error) {
+        res.status(502).send({
+            error: 'Reverse upstream is unavailable'
+        });
+    }
+}
+
 module.exports = {
     getHome,
     getUserById,
     reverseUserString,
+    reverseUserStringHttp,
     getUserAsync,
     getUserWithRetry
 };
