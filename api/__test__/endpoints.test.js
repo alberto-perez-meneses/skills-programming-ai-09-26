@@ -17,29 +17,41 @@ function createResponse() {
 
 describe('getHome', () => {
     test('envía el saludo esperado', () => {
+        // Arrange
+        const request = {};
         const response = createResponse();
 
-        getHome({}, response);
+        // Act
+        getHome(request, response);
 
+        // Assert
         expect(response.send).toHaveBeenCalledWith('Hello World!');
     });
 });
 
 describe('getUserById', () => {
     test('envía el usuario cuando el identificador existe', () => {
+        // Arrange
+        const request = { params: { id: '1' } };
         const response = createResponse();
 
-        getUserById({ params: { id: '1' } }, response);
+        // Act
+        getUserById(request, response);
 
+        // Assert
         expect(response.status).not.toHaveBeenCalled();
         expect(response.send).toHaveBeenCalledWith({ id: 1, name: 'Alice' });
     });
 
     test('acepta el prefijo numérico que parseInt reconoce', () => {
+        // Arrange
+        const request = { params: { id: '1abc' } };
         const response = createResponse();
 
-        getUserById({ params: { id: '1abc' } }, response);
+        // Act
+        getUserById(request, response);
 
+        // Assert
         expect(response.send).toHaveBeenCalledWith({ id: 1, name: 'Alice' });
     });
 
@@ -51,10 +63,14 @@ describe('getUserById', () => {
         ['un identificador Unicode', 'ñ'],
         ['un identificador emoji', '😀']
     ])('responde 404 para %s', (_, id) => {
+        // Arrange
+        const request = { params: { id } };
         const response = createResponse();
 
-        getUserById({ params: { id } }, response);
+        // Act
+        getUserById(request, response);
 
+        // Assert
         expect(response.status).toHaveBeenCalledWith(404);
         expect(response.send).toHaveBeenCalledWith({ error: 'User not found' });
     });
@@ -62,10 +78,14 @@ describe('getUserById', () => {
 
 describe('reverseUserString', () => {
     test('envía la cadena original y su versión invertida', () => {
+        // Arrange
+        const request = { params: { str: 'hello' } };
         const response = createResponse();
 
-        reverseUserString({ params: { str: 'hello' } }, response);
+        // Act
+        reverseUserString(request, response);
 
+        // Assert
         expect(response.send).toHaveBeenCalledWith({
             original: 'hello',
             reversed: 'olleh'
@@ -73,18 +93,26 @@ describe('reverseUserString', () => {
     });
 
     test('conserva los campos vacíos al invertir una cadena vacía', () => {
+        // Arrange
+        const request = { params: { str: '' } };
         const response = createResponse();
 
-        reverseUserString({ params: { str: '' } }, response);
+        // Act
+        reverseUserString(request, response);
 
+        // Assert
         expect(response.send).toHaveBeenCalledWith({ original: '', reversed: '' });
     });
 
     test('invierte caracteres Unicode BMP', () => {
+        // Arrange
+        const request = { params: { str: 'mañana' } };
         const response = createResponse();
 
-        reverseUserString({ params: { str: 'mañana' } }, response);
+        // Act
+        reverseUserString(request, response);
 
+        // Assert
         expect(response.send).toHaveBeenCalledWith({
             original: 'mañana',
             reversed: 'anañam'
@@ -92,10 +120,14 @@ describe('reverseUserString', () => {
     });
 
     test('invierte un emoji por sus unidades UTF-16 actuales', () => {
+        // Arrange
+        const request = { params: { str: '😀' } };
         const response = createResponse();
 
-        reverseUserString({ params: { str: '😀' } }, response);
+        // Act
+        reverseUserString(request, response);
 
+        // Assert
         expect(response.send).toHaveBeenCalledWith({
             original: '😀',
             reversed: '\uDE00\uD83D'
@@ -106,9 +138,15 @@ describe('reverseUserString', () => {
         ['una cadena nula', null],
         ['una cadena ausente', undefined]
     ])('lanza TypeError para %s', (_, str) => {
+        // Arrange
+        const request = { params: { str } };
         const response = createResponse();
 
-        expect(() => reverseUserString({ params: { str } }, response)).toThrow(TypeError);
+        // Act
+        const action = () => reverseUserString(request, response);
+
+        // Assert
+        expect(action).toThrow(TypeError);
     });
 });
 
