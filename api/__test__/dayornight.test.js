@@ -56,4 +56,43 @@ describe('whatPartOfDay', () => {
             expect(result).toBe(expected);
         });
     });
+
+    describe('bordes y validación extra (mutation testing)', () => {
+        test.each([
+            [6.99],
+            [17.99],
+            [7.1],
+            [NaN],
+            [null],
+            [undefined],
+            [true],
+            ['']
+        ])('Undetermined para entrada no entera o inválida: %s', (hour) => {
+            expect(whatPartOfDay(hour)).toBe('Undetermined');
+        });
+
+        test('7 es Daylight (mata >= 7 → > 7)', () => {
+            expect(whatPartOfDay(7)).toBe('Daylight');
+        });
+
+        test('6 es Night (mata >= 7 → >= 6 o < 7 relajado)', () => {
+            expect(whatPartOfDay(6)).toBe('Night');
+        });
+
+        test('17 es Daylight (mata <= 17 → < 17)', () => {
+            expect(whatPartOfDay(17)).toBe('Daylight');
+        });
+
+        test('18 es Night (mata <= 17 → <= 18)', () => {
+            expect(whatPartOfDay(18)).toBe('Night');
+        });
+
+        test('0 es Night (mata hour < 0 → hour <= 0)', () => {
+            expect(whatPartOfDay(0)).toBe('Night');
+        });
+
+        test('23 es Night (mata hour > 23 → hour >= 23)', () => {
+            expect(whatPartOfDay(23)).toBe('Night');
+        });
+    });
 });
