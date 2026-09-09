@@ -3,6 +3,8 @@
 /api/dist/*
 /api/logs/*
 /api/coverage/*
+/api/.stryker-tmp
+/api/reports
 /node_modules/*
 /coverage/*
 .DS_Store   
