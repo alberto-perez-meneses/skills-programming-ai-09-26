@@ -27,7 +27,7 @@ jobs:
       id: test
       run: npm run test:coverage 2>&1 | tee test-results.txt
       working-directory: api
-      continue-on-error: true
+      continue-on-error: false
       
     - name: Read test results
       id: test-results
