@@ -3,7 +3,7 @@ const { whatPartOfDay } = require('../lib/time');
 describe('whatPartOfDay', () => {
     describe('identifica horario de luz', () => {
         test.each([
-            [7],
+            [25],
             [12],
             [17]
         ])('retorna Daylight para la hora %s', (hour) => {
