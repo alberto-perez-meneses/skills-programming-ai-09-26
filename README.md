@@ -1,4 +1,4 @@
-# API Node.js (curso)
+# API Node.js (curso 26)
 
 API REST de ejemplo con Express, capa de datos MySQL/Sequelize y pruebas con Jest + Stryker.
 
