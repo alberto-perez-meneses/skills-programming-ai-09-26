@@ -1,0 +1,93 @@
+name: Testing PR
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22.x]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+    
+    - name: Install dependencies
+      run: npm i
+      working-directory: api
+      
+    - name: Run tests with coverage
+      id: test
+      run: npm run test:coverage 2>&1 | tee test-results.txt
+      working-directory: api
+      continue-on-error: true
+      
+    - name: Read test results
+      id: test-results
+      if: always()
+      run: |
+        TEST_OUTPUT=$(cat api/test-results.txt)
+        echo "results<<EOF" >> $GITHUB_OUTPUT
+        echo "$TEST_OUTPUT" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+      
+        #Generate test summary
+    - name: Generate test summary
+      if: always()
+      run: |
+        echo "# 📊 Resultados de Pruebas Unitarias" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Resumen de Ejecución" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        cat api/test-results.txt >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "_Generado el: $(date)_" >> $GITHUB_STEP_SUMMARY
+
+    - name: Run mutation tests
+      id: mutation
+      run: npm run test:mutation 2>&1 | tee mutation-results.txt
+      working-directory: api
+      continue-on-error: true
+      
+    - name: Read mutation results
+      id: mutation-results
+      if: always()
+      continue-on-error: true
+      run: |
+        if [ -f api/mutation-results.txt ]; then
+          MUTATION_OUTPUT=$(cat api/mutation-results.txt)
+          echo "mutation_results<<EOF" >> $GITHUB_OUTPUT
+          echo "$MUTATION_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        else
+          echo "mutation_results<<EOF" >> $GITHUB_OUTPUT
+          echo "No se generaron resultados de mutation testing (el archivo no existe)" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        fi
+      
+    - name: Generate mutation summary
+      if: always()
+      continue-on-error: true
+      run: |
+        echo "# Resultados de Pruebas de Mutación" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Resumen de Ejecución" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        if [ -f api/mutation-results.txt ]; then
+          cat api/mutation-results.txt >> $GITHUB_STEP_SUMMARY
+        else
+          echo "No se generaron resultados de mutation testing (el archivo no existe)" >> $GITHUB_STEP_SUMMARY
+        fi
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "_Generado el: $(date)_" >> $GITHUB_STEP_SUMMARY
