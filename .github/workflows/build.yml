@@ -1,0 +1,38 @@
+name: Build and Publish Image
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push
+      uses: docker/build-push-action@v5
+      with:
+        context: ./api
+        file: ./api/Dockerfile
+        push: true
+        tags: ghcr.io/${{github.repository}}-node-app:latest
+
+    - name: Build and push tagged image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./api
+        file: ./api/Dockerfile
+        push: true
+        tags: ghcr.io/${{github.repository}}-node-app:${{github.sha}}
