@@ -1,0 +1,81 @@
+---
+description: Estándar para diseñar y modificar controladores HTTP Express: handlers pequeños, validación, respuestas consistentes y separación de responsabilidades.
+globs: "**/*Controller.{js,ts,mjs,cjs},**/controllers/**/*.{js,ts,mjs,cjs},**/routes/**/*.{js,ts,mjs,cjs}"
+alwaysApply: false
+---
+
+# Controladores HTTP de API
+
+## Responsabilidad
+- Un controlador HTTP adapta la petición a la lógica de aplicación y la respuesta al contrato HTTP.
+- Mantener handlers pequeños, predecibles y fáciles de probar.
+- No colocar lógica compleja de negocio, acceso directo a infraestructura o consultas extensas dentro del controlador si el proyecto dispone de servicios/repositorios.
+- Reutilizar servicios, validadores y utilidades existentes antes de crear duplicados.
+
+## Entrada
+- Leer únicamente los parámetros que la ruta realmente declara.
+- Validar `req.params`, `req.query` y `req.body` antes de usarlos.
+- No usar `parseInt()` como validación de IDs. Validar el formato completo y después convertir.
+- Para un `id` numérico, rechazar entradas parcialmente numéricas como `"1abc"`.
+- Definir límites para strings de ruta o query que puedan procesarse en memoria.
+- Tratar explícitamente valores ausentes o de tipo incorrecto.
+
+## Respuestas
+- Cada handler debe producir una respuesta clara y terminar el flujo después de enviarla.
+- No llamar `next()` después de `res.send()`, `res.json()` o `res.status(...).send()`.
+- Usar `res.status(...).json(...)` o la convención equivalente del proyecto.
+- Mantener un formato de respuesta consistente.
+- En `404`, no revelar más información de la necesaria.
+- No devolver entidades completas si contienen campos internos; mapear a un DTO/objeto público cuando sea necesario.
+
+## Errores
+- Los errores esperados de validación deben convertirse en respuestas HTTP controladas.
+- Los errores inesperados deben delegarse al middleware de errores mediante `next(err)` cuando el patrón del proyecto lo requiera.
+- En handlers `async`, seguir el patrón de manejo de errores adoptado por la versión de Express del proyecto.
+- No usar `try/catch` vacío ni ocultar errores.
+- No enviar stack traces, mensajes internos o detalles de infraestructura al cliente.
+
+## Patrón de búsqueda por ID
+Para recursos identificados por número:
+1. Obtener `req.params.id`.
+2. Validar el formato completo.
+3. Convertir con `Number()`.
+4. Verificar límites si existen.
+5. Consultar la fuente de datos.
+6. Responder `404` si el recurso no existe.
+7. Devolver solo el modelo/DTO público.
+
+Evitar este patrón:
+`users.find(user => user.id === parseInt(req.params.id, 10))`
+
+Preferir un patrón equivalente a:
+`const id = Number(req.params.id)` después de validar que toda la entrada cumple el formato esperado.
+
+## Separación de responsabilidades
+- El controlador no debe conocer detalles de almacenamiento que pertenezcan a un repositorio.
+- El controlador no debe contener algoritmos de transformación complejos que puedan vivir en una utilidad o servicio.
+- Las utilidades existentes deben reutilizarse si su contrato es adecuado.
+- No corregir comportamiento de una utilidad fuera del alcance solicitado sin justificarlo.
+
+## Compatibilidad con el proyecto
+- Respetar CommonJS o ES Modules según el código existente.
+- Respetar nombres, estructura de carpetas, tipos y convenciones ya presentes.
+- No introducir dependencias nuevas si la funcionalidad puede resolverse con las existentes.
+- Mantener las firmas públicas de handlers salvo que el cambio sea necesario.
+
+## Pruebas
+Al modificar un controlador, considerar como mínimo:
+- caso válido;
+- parámetro ausente o mal formado;
+- recurso inexistente;
+- entrada con prefijo/sufijo inválido;
+- entrada demasiado grande cuando aplique;
+- error inesperado cuando el controlador dependa de una operación que pueda fallar.
+
+## Revisión final
+Antes de terminar:
+1. Confirmar que toda entrada externa está validada.
+2. Confirmar que cada ruta tiene respuestas y estados coherentes.
+3. Confirmar que no se envía información interna.
+4. Confirmar que los errores siguen el patrón del proyecto.
+5. Ejecutar las pruebas relevantes y lint/typecheck si existen.
