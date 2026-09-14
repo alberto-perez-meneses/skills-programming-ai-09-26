@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "jest",
+  "mutate": [
+    "lib/time.js",
+    "lib/string.js"
+  ],
+  "ignorePatterns": [
+    "src/**"
+  ],
+  "reporters": ["html", "clear-text", "progress"]
+}
