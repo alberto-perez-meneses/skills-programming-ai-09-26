@@ -1,0 +1,103 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      deployment_method:
+        description: 'Deployment method'
+        required: true
+        default: 'docker-compose'
+        type: choice
+        options:
+          - docker-compose
+          - flyio
+          - railway
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Pull Docker image
+      run: |
+        echo "Pulling image: ghcr.io/${{ github.repository }}-node-app/api:latest"
+        docker pull ghcr.io/${{ github.repository }}-node-app/api:latest
+        docker images | grep "${{ github.repository }}"
+
+    - name: Deploy to Production
+      run: |
+        echo "Starting deployment to ${{ inputs.environment }}"
+        echo "Using deployment method: ${{ inputs.deployment_method }}"
+        echo "Image pulled successfully: ghcr.io/${{ github.repository }}-node-app/api:latest"
+        
+        # ============================================
+        # EJEMPLOS DE DEPLOYMENT - Descomenta el que necesites
+        # ============================================
+        
+        # OPCIÓN 1: Docker Compose (Local o servidor remoto)
+        # Requisitos previos:
+        #   - docker-compose.yml debe existir en el repositorio
+        #   - Acceso SSH al servidor (si es remoto)
+        #   - Variables de entorno configuradas
+        #
+        # if [ "${{ inputs.deployment_method }}" == "docker-compose" ]; then
+        #   echo "📋 Deploying with Docker Compose..."
+        #   docker compose down
+        #   docker compose pull
+        #   docker compose up -d
+        #   docker compose ps
+        # fi
+        
+        # OPCIÓN 2: Fly.io
+        # Requisitos previos:
+        #   - flyctl instalado: https://fly.io/docs/hands-on/install-flyctl/
+        #   - Autenticado: fly auth login
+        #   - App creada: fly apps create <app-name>
+        #   - fly.toml configurado en el repositorio
+        #   - Secret: FLY_API_TOKEN configurado en GitHub Secrets
+        #
+        # if [ "${{ inputs.deployment_method }}" == "flyio" ]; then
+        #   echo "✈️ Deploying to Fly.io..."
+        #   echo "${{ secrets.FLY_API_TOKEN }}" | flyctl auth login --with-token
+        #   flyctl deploy --image ghcr.io/${{ github.repository }}/api:latest
+        #   flyctl status
+        # fi
+        
+        # OPCIÓN 3: Railway
+        # Requisitos previos:
+        #   - Railway CLI instalado: npm i -g @railway/cli
+        #   - Autenticado: railway login
+        #   - Proyecto vinculado: railway link
+        #   - Secret: RAILWAY_TOKEN configurado en GitHub Secrets
+        #
+        # if [ "${{ inputs.deployment_method }}" == "railway" ]; then
+        #   echo "🚂 Deploying to Railway..."
+        #   echo "${{ secrets.RAILWAY_TOKEN }}" | railway login --token
+        #   railway up --image ghcr.io/${{ github.repository }}/api:latest
+        #   railway status
+        # fi
+        
+        echo "Deployment placeholder completed"
+        echo "IMPORTANTE: Descomenta y configura el método de deployment que necesites arriba"
+
