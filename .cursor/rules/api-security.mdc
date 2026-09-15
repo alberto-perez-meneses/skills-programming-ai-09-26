@@ -1,0 +1,63 @@
+---
+description: Reglas de seguridad para APIs Express/Node.js, con énfasis en validación estricta, exposición mínima y manejo seguro de errores.
+globs: "**/*.{js,ts,mjs,cjs}"
+alwaysApply: false
+---
+
+# Seguridad de API Express
+
+## Objetivo
+Aplicar defensa en profundidad a cualquier endpoint HTTP. No confiar en datos de `req.params`, `req.query`, `req.body`, headers, cookies ni datos externos.
+
+## Entrada y validación
+- Validar formato, tipo, rango y longitud antes de ejecutar lógica de negocio.
+- Para IDs numéricos, no usar `parseInt()` como validador. Aceptar únicamente el formato definido por la API, por ejemplo `/^\\d+$/`, y convertir después con `Number()`.
+- Rechazar valores como `1abc`, `01x`, cadenas vacías, `NaN`, `Infinity` o números fuera de rango.
+- Definir límites explícitos para parámetros de ruta y payloads.
+- No aceptar objetos donde se espera una cadena o número.
+- Preferir esquemas de validación existentes en el proyecto; si no existen, crear validación pequeña y reutilizable.
+- No confiar en sanitización como sustituto de validación.
+
+## Exposición de datos
+- Responder únicamente con los campos públicos necesarios.
+- No devolver objetos internos, secretos, tokens, credenciales, stack traces ni metadatos sensibles.
+- Evitar endpoints que permitan enumerar recursos mediante IDs predecibles; respetar autenticación/autorización cuando el recurso lo requiera.
+- No hardcodear secretos, API keys, passwords o tokens en código.
+- Usar variables de entorno o el mecanismo de configuración existente.
+
+## Autenticación y autorización
+- No asumir que un endpoint público es seguro por defecto.
+- Verificar autenticación y autorización antes de acceder a recursos protegidos.
+- Aplicar mínimo privilegio: un usuario solo debe acceder a recursos permitidos por su identidad/rol.
+- No confiar en IDs enviados por el cliente para determinar permisos.
+
+## Robustez
+- Limitar tamaño de entradas potencialmente costosas, especialmente strings procesados en memoria.
+- Evitar operaciones que puedan provocar consumo excesivo de CPU o memoria con entradas controladas por el cliente.
+- No introducir regex susceptibles de ReDoS.
+- Evitar redirecciones construidas directamente desde entrada del usuario.
+- No ejecutar comandos, consultas o expresiones con datos sin parametrizar.
+
+## Errores y respuestas
+- No exponer detalles internos en respuestas HTTP de producción.
+- Usar códigos HTTP coherentes: `400` para entrada inválida, `401` para falta de autenticación, `403` para falta de autorización, `404` cuando corresponda y `500` para errores inesperados.
+- Mantener un formato de error consistente con el proyecto.
+- Los errores inesperados deben llegar al middleware de errores de Express mediante `next(err)` o el mecanismo equivalente del framework.
+- Registrar internamente lo necesario para diagnosticar, sin registrar secretos ni datos sensibles.
+
+## Cambios existentes
+- No modificar una implementación funcional solo por estilo si el cambio no mejora seguridad, corrección o mantenibilidad.
+- Si encuentras una vulnerabilidad existente, corrígela con el menor cambio compatible y añade o actualiza pruebas.
+- No cambies el comportamiento de negocio de forma silenciosa.
+
+## Verificación obligatoria
+Antes de terminar cambios de seguridad:
+1. Revisar todos los datos controlados por el cliente.
+2. Comprobar límites y tipos.
+3. Comprobar autenticación/autorización cuando aplique.
+4. Revisar información devuelta y errores.
+5. Ejecutar las pruebas relevantes.
+6. Si el proyecto tiene lint/typecheck, ejecutarlos.
+
+## Referencias
+Para decisiones de seguridad de Express, seguir la documentación oficial y las convenciones ya existentes en el repositorio.
